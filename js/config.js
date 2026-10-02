@@ -1,7 +1,7 @@
 // Único arquivo que precisa ser editado para colocar o site no ar.
 window.SUI_CONFIG = {
-  // Só números, com 55 + DDD. Ex: "5535999999999". PENDENTE: aguardando a Suellen.
-  whatsapp: "",
+  // Só números, com 55 + DDD.
+  whatsapp: "5535998560303",
 
   instagram: "https://www.instagram.com/",
 
