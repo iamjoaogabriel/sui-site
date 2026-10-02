@@ -4,7 +4,7 @@
 // Copie a URL gerada e cole em js/config.js -> leadsEndpoint.
 
 const ABA = "Leads";
-const COLUNAS = ["Data", "Nome", "WhatsApp", "Perfil", "Respostas", "Origem"];
+const COLUNAS = ["Data", "Nome", "WhatsApp", "Queixa", "Respostas", "Origem"];
 
 // Impede que um valor começando com = + - @ seja interpretado como fórmula.
 function texto(valor, max) {
@@ -28,7 +28,7 @@ function doPost(e) {
       new Date(),
       texto(dados.nome, 120),
       "'" + String(dados.whatsapp || "").replace(/\D/g, "").slice(0, 15),
-      texto(dados.perfil, 80),
+      texto(dados.queixa, 1000),
       texto(dados.respostas, 2000),
       texto(dados.origem, 300),
     ]);

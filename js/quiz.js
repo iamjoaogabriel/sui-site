@@ -14,13 +14,18 @@
   const progressBar = progress.querySelector("span");
   const qCount = root.querySelector("[data-q-count]");
   const qText = root.querySelector("[data-q-text]");
+  const qHint = root.querySelector("[data-q-hint]");
   const qOptions = root.querySelector("[data-q-options]");
-  const backBtn = root.querySelector("[data-back]");
+  const qOpen = root.querySelector("[data-q-open]");
+  const qOpenInput = qOpen.querySelector("textarea");
+  const qOpenLabel = qOpen.querySelector("[data-q-open-label]");
+  const qOpenError = qOpen.querySelector("[data-q-open-error]");
   const form = root.querySelector("[data-lead-form]");
   const phoneInput = form.querySelector('[name="whatsapp"]');
   const formError = form.querySelector("[data-form-error]");
 
-  const total = quiz.questions.length;
+  const questions = quiz.questions;
+  const total = questions.length;
   let index = 0;
   const answers = new Array(total).fill(null);
   let lead = null;
@@ -28,7 +33,7 @@
   function show(name) {
     Object.entries(screens).forEach(([key, el]) => { el.hidden = key !== name; });
     progress.hidden = name === "intro";
-    const focusTarget = screens[name].querySelector("h1, h2, legend");
+    const focusTarget = screens[name].querySelector("h1, h2");
     if (focusTarget) {
       focusTarget.setAttribute("tabindex", "-1");
       focusTarget.focus({ preventScroll: true });
@@ -42,78 +47,98 @@
     progress.setAttribute("aria-valuenow", String(pct));
   }
 
-  function renderQuestion() {
-    const q = quiz.questions[index];
-    qCount.textContent = `Pergunta ${index + 1} de ${total}`;
-    qText.textContent = q.text;
-    qOptions.replaceChildren();
-    q.options.forEach((opt, i) => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "quiz-option";
-      btn.setAttribute("aria-pressed", String(answers[index] === i));
-      btn.innerHTML = `<span class="quiz-letter" aria-hidden="true">${String.fromCharCode(65 + i)}</span><span></span>`;
-      btn.lastChild.textContent = opt.label;
-      btn.addEventListener("click", () => choose(i, btn));
-      qOptions.appendChild(btn);
-    });
-    setProgress(index);
-    show("question");
+  function next() {
+    if (index < total - 1) {
+      index += 1;
+      renderQuestion();
+    } else {
+      setProgress(total);
+      show("lead");
+    }
   }
 
-  function choose(i, btn) {
-    answers[index] = i;
+  function renderQuestion() {
+    const q = questions[index];
+    qCount.textContent = `Pergunta ${index + 1} de ${total}`;
+    qText.textContent = q.text;
+    qHint.textContent = q.hint || "";
+    qHint.hidden = !q.hint;
+    qOptions.replaceChildren();
+    qOpenError.textContent = "";
+
+    const isText = q.type === "text";
+    qOptions.hidden = isText;
+    qOpen.hidden = !isText;
+
+    if (isText) {
+      qOpenLabel.textContent = q.text;
+      qOpenInput.placeholder = q.placeholder || "";
+      qOpenInput.value = answers[index] || "";
+    } else {
+      q.options.forEach((label, i) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "quiz-option";
+        btn.setAttribute("aria-pressed", String(answers[index] === label));
+        btn.innerHTML = `<span class="quiz-letter" aria-hidden="true">${String.fromCharCode(65 + i)}</span><span></span>`;
+        btn.lastChild.textContent = label;
+        btn.addEventListener("click", () => choose(label, btn));
+        qOptions.appendChild(btn);
+      });
+    }
+    setProgress(index);
+    show("question");
+    if (isText) qOpenInput.focus({ preventScroll: true });
+  }
+
+  function choose(label, btn) {
+    answers[index] = label;
     qOptions.querySelectorAll(".quiz-option").forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
     qOptions.classList.add("is-locked");
     setTimeout(() => {
       qOptions.classList.remove("is-locked");
-      if (index < total - 1) {
-        index += 1;
-        renderQuestion();
-      } else {
-        setProgress(total);
-        show("lead");
-      }
+      next();
     }, 280);
   }
 
-  function computeProfile() {
-    const totals = Object.fromEntries(Object.keys(quiz.profiles).map((k) => [k, 0]));
-    quiz.questions.forEach((q, qi) => {
-      const opt = q.options[answers[qi]];
-      if (opt && opt.scores) {
-        Object.entries(opt.scores).forEach(([k, v]) => { totals[k] = (totals[k] || 0) + v; });
-      }
-    });
-    const order = Object.keys(quiz.profiles);
-    return order.reduce((best, k) => (totals[k] > totals[best] ? k : best), order[0]);
-  }
+  qOpenInput.addEventListener("input", () => { qOpenError.textContent = ""; });
+
+  qOpen.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const q = questions[index];
+    const value = qOpenInput.value.trim().replace(/\s+/g, " ");
+    if (value.length < (q.minLength || 1)) {
+      qOpenError.textContent = "Escreva um pouquinho para eu entender o que você precisa.";
+      return;
+    }
+    answers[index] = value;
+    next();
+  });
 
   function answersSummary() {
-    return quiz.questions.map((q, qi) => ({ pergunta: q.text, resposta: q.options[answers[qi]].label }));
+    return questions.map((q, qi) => ({ id: q.id, pergunta: q.text, resposta: answers[qi] || "" }));
   }
 
-  function buildWhatsAppMessage(profile) {
+  function buildWhatsAppMessage() {
+    const queixa = answersSummary().find((a) => a.id === "queixa");
     const lines = [
-      `Olá, Sui! Fiz o diagnóstico de automaquiagem no site.`,
-      ``,
-      `Meu nome é ${lead.nome} e meu perfil deu: *${profile.title}*.`,
-      ``,
-      `Minhas respostas:`,
-      ...answersSummary().map((a) => `• ${a.pergunta} ${a.resposta}`),
-      ``,
-      `Quero receber meu diagnóstico completo!`,
+      `Olá, Sui! Preenchi o formulário do e-book de automaquiagem visagista no site.`,
+      `Meu nome é ${lead.nome}.`,
     ];
+    if (queixa && queixa.resposta) lines.push("", `O que mais me incomoda: ${queixa.resposta}`);
+    lines.push("", "Gostaria de uma ajuda personalizada!");
     return lines.join("\n");
   }
 
-  function sendLead(profileKey) {
+  function sendLead() {
     if (!cfg.leadsEndpoint) return;
+    const summary = answersSummary();
+    const queixa = summary.find((a) => a.id === "queixa");
     const payload = {
       nome: lead.nome,
       whatsapp: lead.whatsapp,
-      perfil: quiz.profiles[profileKey].title,
-      respostas: answersSummary().map((a) => `${a.pergunta} ${a.resposta}`).join(" | "),
+      queixa: queixa ? queixa.resposta : "",
+      respostas: summary.filter((a) => a.id !== "queixa").map((a) => `${a.pergunta} ${a.resposta}`).join(" | "),
       origem: document.referrer || "direto",
     };
     fetch(cfg.leadsEndpoint, {
@@ -125,15 +150,18 @@
   }
 
   function renderResult() {
-    const key = computeProfile();
-    const profile = quiz.profiles[key];
     const firstName = lead.nome.split(" ")[0];
-    root.querySelector("[data-r-eyebrow]").textContent = `${firstName}, seu perfil é`;
-    root.querySelector("[data-r-title]").textContent = profile.title;
-    root.querySelector("[data-r-teaser]").textContent = profile.teaser;
-    root.querySelector("[data-r-tip]").textContent = profile.tip;
-    root.querySelector("[data-r-wa]").href = window.suiWaLink(buildWhatsAppMessage(profile));
-    sendLead(key);
+    root.querySelector("[data-r-eyebrow]").textContent = `Obrigada, ${firstName}`;
+    const link = root.querySelector("[data-ebook-link]");
+    const pending = root.querySelector("[data-ebook-pending]");
+    const title = root.querySelector("[data-r-title]");
+    const hasEbook = Boolean(cfg.ebookUrl);
+    link.hidden = !hasEbook;
+    pending.hidden = hasEbook;
+    if (hasEbook) link.href = cfg.ebookUrl;
+    title.innerHTML = hasEbook ? "Seu e-book está <em>pronto.</em>" : "Recebi as suas <em>respostas.</em>";
+    root.querySelector("[data-r-wa]").href = window.suiWaLink(buildWhatsAppMessage());
+    sendLead();
     progressBar.style.width = "100%";
     show("result");
   }
@@ -154,7 +182,7 @@
     let error = "";
     if (nome.length < 2) error = "Digite o seu nome.";
     else if (digits.length < 10) error = "Digite um WhatsApp válido, com DDD.";
-    else if (!form.consentimento.checked) error = "Para continuar, aceite receber o resultado pelo WhatsApp.";
+    else if (!form.consentimento.checked) error = "Para continuar, aceite os termos acima.";
     formError.textContent = error;
     if (error) return;
     lead = { nome, whatsapp: "55" + digits };
@@ -166,7 +194,7 @@
     renderQuestion();
   });
 
-  backBtn.addEventListener("click", () => {
+  root.querySelector("[data-back]").addEventListener("click", () => {
     if (index > 0) {
       index -= 1;
       renderQuestion();
@@ -177,12 +205,6 @@
 
   root.querySelector("[data-lead-back]").addEventListener("click", () => {
     index = total - 1;
-    renderQuestion();
-  });
-
-  root.querySelector("[data-restart]").addEventListener("click", () => {
-    answers.fill(null);
-    index = 0;
     renderQuestion();
   });
 })();

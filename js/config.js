@@ -9,6 +9,10 @@ window.SUI_CONFIG = {
   // Vazio = o botão de agendar abre o WhatsApp.
   bookingUrl: "",
 
+  // Caminho do PDF do e-book. Ex: "assets/ebook/automaquiagem-visagista.pdf".
+  // Vazio = a pessoa vê o aviso de que vai receber o e-book pelo WhatsApp.
+  ebookUrl: "",
+
   // URL do Apps Script publicado na planilha de leads (ver integracoes/LEIA-ME.md).
   // Vazio = o quiz funciona normalmente, só não salva na planilha.
   leadsEndpoint: "",

@@ -6,10 +6,11 @@ Site estático (HTML, CSS e JS puros). Sem build, sem dependências, sem mensali
 
 | O quê | Onde |
 |---|---|
-| WhatsApp, Instagram, agenda, planilha | `js/config.js` |
-| Perguntas e perfis do quiz | `js/quiz-data.js` |
+| WhatsApp, Instagram, agenda, planilha, PDF do e-book | `js/config.js` |
+| Perguntas do formulário do e-book | `js/quiz-data.js` |
 | Textos (bio, serviços, depoimentos, endereço) | `index.html` (procure por `EDITAR`) |
 | Fotos | `assets/img/` (formato `.webp`) |
+| PDF do e-book | `assets/ebook/` |
 
 ## Ver o site no computador
 
